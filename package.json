@@ -29,6 +29,6 @@
     "typescript": "^3.5.2"
   },
   "dependencies": {
-    "bson": "^4.0.2"
+    "buffer": "^5.2.1"
   }
 }

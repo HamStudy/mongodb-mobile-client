@@ -10,6 +10,7 @@ export function setMongoMobilePlugin(plugin: MongoDBMobileSource) {
   MongoMobilePlugin = plugin;
 }
 
+import * as Types from './types';
 
 export * from './db';
 export * from './collection';
@@ -18,5 +19,5 @@ export * from './aggregationCursor';
 export * from './bulkOps';
 
 export {
-    MongoMobileTypes, MongoDBMobileSource
+    MongoMobileTypes, MongoDBMobileSource, Types
 }

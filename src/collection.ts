@@ -8,6 +8,8 @@ import { Cursor, CursorCommentOptions } from './cursor';
 import { OrderedBulkOperation } from './bulkOps/OrderedBulkOperation';
 import { UnorderedBulkOperation } from './bulkOps/UnorderedBulkOperation';
 
+import {encodeExtendedJson, decodeExtendedJson} from './types/index';
+
 const defaultWriteConcern = 1;
 
 function getWriteConcern(options: CommonOptions = {}) {
@@ -39,7 +41,8 @@ export class Collection {
       collection: this.collectionName,
     });
   }
-  async createIndex(name: string, fieldOrSpec: string | object, options?: IndexOptions): Promise<any> {
+  /** http://mongodb.github.io/node-mongodb-native/3.1/api/Collection.html#createIndex */
+  async createIndex(fieldOrSpec: string | any, options: IndexOptions = {}): Promise<string> { 
     let indexRes = await getMongoMobilePlugin().createIndexes({
       db: this.db.databaseName,
       collection: this.collectionName,
@@ -65,24 +68,24 @@ export class Collection {
     
     return indexRes && indexRes.indexesCreated && indexRes.indexesCreated[0];
   }
-  aggregate<T extends object = any>(pipeline?: object[], options?: MongoMobileTypes.AggregateOptions): AggregationCursor<T> {
+  aggregate<T extends object = any>(pipeline?: object[], options: MongoMobileTypes.AggregateOptions = {}): AggregationCursor<T> {
     return new AggregationCursor<T>(this, pipeline, options);
   }
-  find<T extends object = any>(query: object, options?: MongoMobileTypes.FindOptions): Cursor<T> {
+  find<T extends object = any>(query: FilterQuery<T>, options: MongoMobileTypes.FindOptions = {}): Cursor<T> {
     return new Cursor<T>(this, query, options);
   }
-  async findOne<T extends object = any>(query: object, options?: MongoMobileTypes.FindOptions): Promise<T | null> {
+  async findOne<T extends object = any>(query: FilterQuery<T>, options: MongoMobileTypes.FindOptions = {}): Promise<T | null> {
     options.limit = 1;
     options.batchSize = 1;
     let f = await this.find(query, options).batchSize(1).toArray();
     return f[0] || null;
   }
-  count(query?: any, options?: CursorCommentOptions): Promise<number> {
+  count<T extends object = any>(query?: FilterQuery<T>, options: CursorCommentOptions = {}): Promise<number> {
     let cursor = new Cursor(this, query);
     return cursor.count(true, options);
   }
 
-  async dropIndex(indexName: string, options?: CommonOptions & { maxTimeMS?: number }): Promise<any> {
+  async dropIndex(indexName: string, options: CommonOptions & { maxTimeMS?: number } = {}): Promise<any> {
     let res = await getMongoMobilePlugin().dropIndex({
       db: this.db.databaseName, collection: this.collectionName,
       name: indexName,
@@ -94,21 +97,21 @@ export class Collection {
     return res;
   }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/Collection.html#initializeOrderedBulkOp */
-  initializeOrderedBulkOp(options?: CommonOptions): OrderedBulkOperation {
+  initializeOrderedBulkOp(options: CommonOptions = {}): OrderedBulkOperation {
     return new OrderedBulkOperation(this, {writeConcern: getWriteConcern(options)});
   }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/Collection.html#initializeUnorderedBulkOp */
-  initializeUnorderedBulkOp(options?: CommonOptions): UnorderedBulkOperation {
+  initializeUnorderedBulkOp(options: CommonOptions = {}): UnorderedBulkOperation {
     return new UnorderedBulkOperation(this, {writeConcern: getWriteConcern(options)});
   }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/Collection.html#insertMany */
-  async insertMany(docs: any[], options: CollectionInsertManyOptions = {}): Promise<InsertWriteOpResult> {
+  async insertMany<T extends object>(docs: T[], options: CollectionInsertManyOptions = {}): Promise<InsertWriteOpResult> {
     let writeConcern = getWriteConcern(options);
 
     let res = await getMongoMobilePlugin().insertMany({
       db: this.db.databaseName,
       collection: this.collectionName,
-      docs: docs,
+      docs: encodeExtendedJson(docs),
       options: {
         bypassDocumentValidation: options.bypassDocumentValidation,
         ordered: options.ordered,
@@ -118,16 +121,19 @@ export class Collection {
 
     return {
       insertedCount: res.insertedCount,
-      insertedIds: res.insertedIds,
+      insertedIds: decodeExtendedJson(res.insertedIds),
       ops: null,
       connection: this.db,
       result: {ok: res.insertedCount, n: docs.length}
     };
   }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/Collection.html#insertOne */
-  async insertOne(doc: any, options: CollectionInsertOneOptions = {}): Promise<InsertOneWriteOpResult> {
+  async insertOne<T extends object>(doc: T, options: CollectionInsertOneOptions = {}): Promise<InsertOneWriteOpResult> {
     let writeConcern = getWriteConcern(options);
 
+    console.log("Doc before encoding", doc);
+    doc = encodeExtendedJson(doc);
+    console.log("Doc after encoding", doc);
     let res = await getMongoMobilePlugin().insertOne({
       db: this.db.databaseName,
       collection: this.collectionName,
@@ -140,7 +146,7 @@ export class Collection {
 
     return {
       insertedCount: 1,
-      insertedId: res.insertedId,
+      insertedId: decodeExtendedJson(res.insertedId),
       ops: null,
       connection: this.db,
       result: {ok: 1, n: 1}
@@ -152,10 +158,10 @@ export class Collection {
     let res = await getMongoMobilePlugin().updateMany({
       db: this.db.databaseName,
       collection: this.collectionName,
-      filter: filter,
-      update: update,
+      filter: encodeExtendedJson(filter),
+      update: encodeExtendedJson(update),
       options: {
-        arrayFilters: options.arrayFilters,
+        arrayFilters: encodeExtendedJson(options.arrayFilters),
         upsert: options.upsert,
         bypassDocumentValidation: options.bypassDocumentValidation,
         writeConcern
@@ -172,7 +178,7 @@ export class Collection {
       matchedCount: res.matchedCount,
       modifiedCount: res.modifiedCount,
       upsertedCount: res.upsertedCount,
-      upsertedId: res.upsertedId as any
+      upsertedId: decodeExtendedJson(res.upsertedId)
     };
   }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/Collection.html#updateOne */
@@ -182,10 +188,10 @@ export class Collection {
     let res = await getMongoMobilePlugin().updateOne({
       db: this.db.databaseName,
       collection: this.collectionName,
-      filter: filter,
-      update: update,
+      filter: encodeExtendedJson(filter),
+      update: encodeExtendedJson(update),
       options: {
-        arrayFilters: options.arrayFilters,
+        arrayFilters: encodeExtendedJson(options.arrayFilters),
         upsert: options.upsert,
         bypassDocumentValidation: options.bypassDocumentValidation,
         writeConcern
@@ -202,7 +208,7 @@ export class Collection {
       matchedCount: res.matchedCount,
       modifiedCount: res.modifiedCount,
       upsertedCount: res.upsertedCount,
-      upsertedId: res.upsertedId as any
+      upsertedId: decodeExtendedJson(res.upsertedId) as any
     };
   }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/Collection.html#deleteMany */
@@ -212,7 +218,7 @@ export class Collection {
     let res = await getMongoMobilePlugin().deleteMany({
       db: this.db.databaseName,
       collection: this.collectionName,
-      filter: filter,
+      filter: encodeExtendedJson(filter),
       options: {
         writeConcern
       }
@@ -234,7 +240,7 @@ export class Collection {
     let res = await getMongoMobilePlugin().deleteOne({
       db: this.db.databaseName,
       collection: this.collectionName,
-      filter: filter,
+      filter: encodeExtendedJson(filter),
       options: {
         writeConcern
       }
@@ -256,7 +262,7 @@ export class Collection {
     let res = await getMongoMobilePlugin().findOneAndDelete({
       db: this.db.databaseName,
       collection: this.collectionName,
-      filter: filter,
+      filter: encodeExtendedJson(filter),
       options: {
         writeConcern,
         collation: options.collation,
@@ -267,7 +273,7 @@ export class Collection {
     });
 
     return {
-      value: res.doc as TSchema,
+      value: decodeExtendedJson(res.doc) as TSchema,
       ok: 1
     };
   }
@@ -278,8 +284,8 @@ export class Collection {
     let res = await getMongoMobilePlugin().findOneAndReplace({
       db: this.db.databaseName,
       collection: this.collectionName,
-      filter: filter,
-      replacement: replacement,
+      filter: encodeExtendedJson(filter),
+      replacement: encodeExtendedJson(replacement),
       options: {
         writeConcern,
         bypassDocumentValidation: options.bypassDocumentValidation,
@@ -293,7 +299,7 @@ export class Collection {
     });
 
     return {
-      value: res.doc as TSchema,
+      value: decodeExtendedJson(res.doc) as TSchema,
       ok: 1
     };
   }
@@ -304,8 +310,8 @@ export class Collection {
     let res = await getMongoMobilePlugin().findOneAndUpdate({
       db: this.db.databaseName,
       collection: this.collectionName,
-      filter: filter,
-      update: update,
+      filter: encodeExtendedJson(filter),
+      update: encodeExtendedJson(update),
       options: {
         writeConcern,
         bypassDocumentValidation: options.bypassDocumentValidation,
@@ -320,7 +326,7 @@ export class Collection {
     });
 
     return {
-      value: res.doc as TSchema,
+      value: decodeExtendedJson(res.doc) as TSchema,
       ok: 1
     };
   }

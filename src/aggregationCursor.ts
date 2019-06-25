@@ -2,34 +2,21 @@ import { MongoMobileTypes } from './definitions';
 import { Collection } from './collection';
 import { IteratorCallback } from './commonTypes';
 import { getMongoMobilePlugin, CursorResult } from './index';
+import { 
+  BaseCursor
+} from './baseCursor';
 
-const K_AUTOCLOSE_TIMEOUT = 1000 * 30; // Automatically close the cursor after 30 seconds of inactivity if it isn't closed automatically
+import {
+  encodeExtendedJson
+} from './types/extendedJson';
 
-class AggregationCursor<T extends Object> {
-  private cursorId: string = null;
-  private _asyncTimeoutMs = K_AUTOCLOSE_TIMEOUT;
-  private _curBatch: T[] = [];
-  private _isEnd = false;
-  private _isClosed = false;
-
-  private autocloseTimer: ReturnType<typeof setTimeout> = null;
-
-  active() { return !!this.cursorId; }
-  private resetCloseTimer() {
-    if (this.autocloseTimer !== null) {
-      clearTimeout(this.autocloseTimer);
-    }
-    this.autocloseTimer = setTimeout(() => this.close(), this._asyncTimeoutMs);
-  }
-  private errorIfClosed() {
-    if (this.isClosed()) { throw new Error("Attempting to access a closed cursor"); }
-  }
-  private async execute() {
+class AggregationCursor<T extends Object> extends BaseCursor<T> {
+  protected async execute() {
     let cursorStart = await getMongoMobilePlugin().aggregate({
       db: this.collection.db.databaseName,
       collection: this.collection.collectionName,
 
-      pipeline: this._pipelineStages,
+      pipeline: encodeExtendedJson(this._pipelineStages),
       options: this.options,
       cursor: true
     });
@@ -37,7 +24,8 @@ class AggregationCursor<T extends Object> {
     this.resetCloseTimer();
   }
 
-  constructor(private collection: Collection, private _pipelineStages: any[] = [], private options: MongoMobileTypes.AggregateOptions = {}) {
+  constructor(collection: Collection, private _pipelineStages: any[] = [], private options: MongoMobileTypes.AggregateOptions = {}) {
+    super(collection);
   }
 
   allowDiskUse(value: boolean): AggregationCursor<T> {
@@ -49,6 +37,7 @@ class AggregationCursor<T extends Object> {
     this.errorIfClosed();
     if (value < 1) { throw new Error("batchSize must be at least 1"); }
     this.options.batchSize = value;
+    this._cursorBatchSize = value;
     return this;
   }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/Cursor.html#clone */
@@ -57,20 +46,6 @@ class AggregationCursor<T extends Object> {
     nc.options = this.options;
     nc._asyncTimeoutMs = this._asyncTimeoutMs;
     return nc;
-  }
-  /** http://mongodb.github.io/node-mongodb-native/3.1/api/Cursor.html#close */
-  async close(): Promise<CursorResult> {
-    if (!this.cursorId) { return false; }
-    await getMongoMobilePlugin().closeCursor({
-      cursorId: this.cursorId
-    });
-    if (this.autocloseTimer !== null) {
-      clearTimeout(this.autocloseTimer);
-      this.cursorId = null;
-      this.autocloseTimer = null;
-    }
-    this._isClosed = true;
-    return true;
   }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/Cursor.html#collation */
   collation(value: MongoMobileTypes.Collation): AggregationCursor<T> {
@@ -82,20 +57,10 @@ class AggregationCursor<T extends Object> {
     throw new Error("Not implemented!");
   }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/AggregationCursor.html#each */
-  async each(iterator: IteratorCallback<T>) : Promise<void> {
-    this.errorIfClosed();
-    let next: T;
-    while (next = await this.next()) {
-      iterator(next);
-    }
-    await this.close();
+  each(iterator: IteratorCallback<T>) : Promise<void> {
+    return this.forEach(iterator);
   }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/AggregationCursor.html#hasNext */
-  hasNext(): Promise<boolean> {
-    this.errorIfClosed();
-    // TODO implement
-    throw new Error("Not implemented");
-  }
   geoNear(document: object): AggregationCursor<T> {
     this._pipelineStages.push({
       $geoNear: document
@@ -126,33 +91,6 @@ class AggregationCursor<T extends Object> {
     this.options.maxTimeMS = value;
     return this;
   }
-  /** http://mongodb.github.io/node-mongodb-native/3.1/api/AggregationCursor.html#next */
-  async next(): Promise<T | null> {
-    if (this._isClosed) {
-      return null;
-    }
-    if (!this.cursorId){
-      await this.execute();
-    } else {
-      this.resetCloseTimer();
-    }
-    if (this._curBatch.length) {
-      return this._curBatch.shift();
-    } else if (this._isEnd) {
-      this.close();
-      return null;
-    }
-
-    let next = await getMongoMobilePlugin().cursorGetNext<T>({
-      cursorId: this.cursorId, batchSize: this.options.batchSize || 5
-    });
-    if (next.complete) {
-      this._isEnd;
-    }
-    this._curBatch = next.results || [];
-    
-    return this.next();
-  }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/AggregationCursor.html#out */
   out(destination: string): AggregationCursor<T> {
     this._pipelineStages.push({
@@ -174,17 +112,6 @@ class AggregationCursor<T extends Object> {
     });
     return this;
   }
-  /** http://mongodb.github.io/node-mongodb-native/3.1/api/AggregationCursor.html#rewind */
-  async rewind() {
-    if (!this._isClosed) {
-      this.close();
-    }
-    this._isClosed = false;
-    this._isEnd = false;
-    this._curBatch = [];
-    this.cursorId = null;
-    return this;
-  }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/AggregationCursor.html#setEncoding */
   skip(value: number): AggregationCursor<T> {
     this._pipelineStages.push({
@@ -199,16 +126,6 @@ class AggregationCursor<T extends Object> {
     });
     return this;
   }
-  /** http://mongodb.github.io/node-mongodb-native/3.1/api/AggregationCursor.html#toArray */
-  async toArray(): Promise<T[]> {
-    this.errorIfClosed();
-    let all: T[] = [];
-    let next: T;
-    while (next = await this.next()) {
-      all.push(next);
-    }
-    return all;
-  }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/AggregationCursor.html#unwind */
   unwind(field: string): AggregationCursor<T> {
     this._pipelineStages.push({
@@ -216,23 +133,10 @@ class AggregationCursor<T extends Object> {
     });
     return this;
   }
-  /** http://mongodb.github.io/node-mongodb-native/3.1/api/Cursor.html#isClosed */
-  isClosed() {
-    return this._isClosed;
-  }
-  /** http://mongodb.github.io/node-mongodb-native/3.1/api/Cursor.html#limit */
-  /** http://mongodb.github.io/node-mongodb-native/3.1/api/Cursor.html#map */
-  map<U>(transform: (document: T) => U): AggregationCursor<U> {
-    throw new Error("Not implemented");
-  }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/Cursor.html#maxAwaitTimeMS */
   maxAwaitTimeMS(value: number): AggregationCursor<T> {
     this._asyncTimeoutMs = value;
     return this;
-  }
-  /** http://mongodb.github.io/node-mongodb-native/3.1/api/Cursor.html#setReadPreference */
-  setReadPreference(readPreference: any): AggregationCursor<T> {
-    return this; // Total no-op since read preference is meaningless in mongodb mobile
   }
   /** http://mongodb.github.io/node-mongodb-native/3.1/api/Cursor.html#toArray */
 }

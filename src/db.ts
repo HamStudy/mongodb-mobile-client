@@ -4,6 +4,7 @@ import { getMongoMobilePlugin } from './index';
 
 import { MongoMobileTypes } from './definitions';
 import { CommonOptions, WriteConcern } from './commonTypes';
+import { decodeExtendedJson } from './types';
 
 export interface DbCreateOptions extends CommonOptions {
   /**
@@ -121,7 +122,7 @@ export class Db {
       db: this.databaseName, command: command, options: options
     });
 
-    return result.reply;
+    return decodeExtendedJson(result.reply);
   }
 
   async dropCollection(name: string): Promise<boolean> {
@@ -136,7 +137,8 @@ export class Db {
     try {
       await getMongoMobilePlugin().dropDatabase({db: this.databaseName});
       return true;
-    } catch {
+    } catch (e) {
+      console.warn("Error dropping database:", e);
       return false;
     }
   }
