@@ -33,10 +33,11 @@ After that you can use the Db class as your main entrypoint:
     const myDb = new Db("myDatabase");
     const users = myDb.createCollection("users"); // 
 
-From there you can query, insert, delete, etc etc etc. See the [Db interface](./dist/db.d.ts) and
-the [Collection interface](./dist/collection.d.ts) for more information. I've tried to make this
-mirror the [node-native-mongodb](http://mongodb.github.io/node-mongodb-native/3.2/) driver API
-as closely as I can.
+From there you can query, insert, delete, etc etc etc. See the [Db interface]
+(https://github.com/HamStudy/mongodb-mobile-client/blob/master/src/db.ts) and
+the [Collection interface](https://github.com/HamStudy/mongodb-mobile-client/blob/master/src/collection.ts)
+for more information. I've tried to make this mirror the [node-native-mongodb]
+(http://mongodb.github.io/node-mongodb-native/3.2/) driver API as closely as I can.
 
 Adapting to work with other database plugins
 ============================================
@@ -45,6 +46,14 @@ If you want this to work with another database plugin (for example a cordova plu
 need to implement a wrapper layer which correctly implements the [MongoDBMobileSource](./dist/definitions.d.ts#L191)
 interface. While I prefer typescript it should work fine with any database interface which uses Promises and matches
 that interface.
+
+Tests
+=====
+
+If you find something that doesn't work, try writing a test to reproduce it in the
+[Capacitor MongoDB Mobile Test App](https://github.com/HamStudy/capacitor-mongodb-mobile-testApp) which
+contains our tests. We don't have complete coverage yet, so feel free to help us out by writing more
+to make sure your use case is supported =]
 
 Helping out
 ===========
