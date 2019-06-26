@@ -14,6 +14,15 @@ project; it was actually included as part of the project during early developmen
 realized that we'd want to be able to potentially use it with a Cordova plugin instead, or perhaps
 even something which could be made to work in Electron.
 
+Installing
+==========
+
+    npm install @hamstudy/mongodb-mobile-client
+
+If you need the capacitor mongodb mobile plugin as well (which you probably do):
+
+    npm install @hamstudy/capacitor-mongodb-mobile
+
 Use
 ===
 
