@@ -71,16 +71,16 @@ export class Collection {
   aggregate<T extends object = any>(pipeline?: object[], options: MongoMobileTypes.AggregateOptions = {}): AggregationCursor<T> {
     return new AggregationCursor<T>(this, pipeline, options);
   }
-  find<T extends object = any>(query: FilterQuery<T>, options: MongoMobileTypes.FindOptions = {}): Cursor<T> {
+  find<T extends object = any>(query: FilterQuery<T> = {}, options: MongoMobileTypes.FindOptions = {}): Cursor<T> {
     return new Cursor<T>(this, query, options);
   }
-  async findOne<T extends object = any>(query: FilterQuery<T>, options: MongoMobileTypes.FindOptions = {}): Promise<T | null> {
+  async findOne<T extends object = any>(query: FilterQuery<T> = {}, options: MongoMobileTypes.FindOptions = {}): Promise<T | null> {
     options.limit = 1;
     options.batchSize = 1;
     let f = await this.find(query, options).batchSize(1).toArray();
     return f[0] || null;
   }
-  count<T extends object = any>(query?: FilterQuery<T>, options: CursorCommentOptions = {}): Promise<number> {
+  count<T extends object = any>(query: FilterQuery<T> = {}, options: CursorCommentOptions = {}): Promise<number> {
     let cursor = new Cursor(this, query);
     return cursor.count(true, options);
   }
