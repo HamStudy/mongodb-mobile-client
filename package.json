@@ -1,6 +1,6 @@
 {
   "name": "@hamstudy/mongodb-mobile-client",
-  "version": "1.0.0-beta.2",
+  "version": "1.0.0-beta.3",
   "description": "Client used by @hamstudy/capacitor-mongodb-mobile and potentially others",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
