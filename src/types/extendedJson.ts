@@ -22,7 +22,9 @@ function isObject(val: any) {
 }
 
 export function encodeExtendedJson(obj: any) : any {
-  if (obj.id && obj.toHexString) {
+  if (obj === undefined || obj === null) {
+    return obj;
+  } else if (obj.id && obj.toHexString) {
     return {[ExtendedTypes.ObjectId]: obj.toHexString()};
   } else if (obj instanceof RegExp) {
     let strVal = obj.toString();
