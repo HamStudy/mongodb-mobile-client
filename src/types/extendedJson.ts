@@ -37,11 +37,10 @@ export function encodeExtendedJson(obj: any) : any {
     };
     return out;
   } else if (obj instanceof Date) {
-    let isoStr = obj.toISOString();
-    // we should only show milliseconds in timestamp if they're non-zero
-    isoStr = obj.getUTCMilliseconds() !== 0 ? isoStr : isoStr.slice(0, -5) + 'Z';
+    // we used to try to pass the date as an ISO string, however that
+    // doesn't work on anything older than Android 8
     return {
-      [ExtendedTypes.Date]: isoStr
+      [ExtendedTypes.Date]: {$numberLong: obj.getTime()+''}
     };
   }
 
