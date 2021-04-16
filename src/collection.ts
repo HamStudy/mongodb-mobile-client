@@ -94,14 +94,23 @@ export class Collection {
     return res;
   }
 
-  async dropIndex(indexName: string, options: CommonOptions & { maxTimeMS?: number } = {}): Promise<any> {
-    let res = await getMongoMobilePlugin().dropIndex({
+  async dropIndex(indexName: string, options?: CommonOptions & { maxTimeMS?: number }): Promise<any>;
+  async dropIndex(keys: object, options?: CommonOptions & { maxTimeMS?: number }): Promise<any>;
+  async dropIndex(arg1: string | object, options: CommonOptions & { maxTimeMS?: number } = {}): Promise<any> {
+    let opts = {
       db: this.db.databaseName, collection: this.collectionName,
-      name: indexName,
+      name: (void 0) as string | undefined,
+      keys: (void 0) as object | undefined,
       options: {
         writeConcern: getWriteConcern(options)
       }
-    });
+    };
+    if (typeof arg1 === 'string') {
+      opts.name = arg1;
+    } else {
+      opts.keys = arg1;
+    }
+    let res = await getMongoMobilePlugin().dropIndex(opts);
 
     return res;
   }
