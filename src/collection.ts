@@ -85,6 +85,15 @@ export class Collection {
     return cursor.count(true, options);
   }
 
+  async listIndexes() {
+    let res = await getMongoMobilePlugin().listIndexes({
+      db: this.db.databaseName,
+      collection: this.collectionName,
+    });
+
+    return res;
+  }
+
   async dropIndex(indexName: string, options: CommonOptions & { maxTimeMS?: number } = {}): Promise<any> {
     let res = await getMongoMobilePlugin().dropIndex({
       db: this.db.databaseName, collection: this.collectionName,
