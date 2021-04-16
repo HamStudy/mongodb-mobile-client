@@ -196,8 +196,8 @@ export namespace MongoMobileTypes {
 
 export interface MongoDBMobileSource {
   initDb(options?: {appID: string}): Promise<{success: true}>;
-  listDatabases(): Promise<{name: string, sizeOnDisk: number, empty: boolean}[]>;
-  listCollections(options: {db: string}): Promise<{name: string}[]>;
+  listDatabases(): Promise<{ databases: {name: string, sizeOnDisk: number, empty: boolean}[]; }>;
+  listCollections(options: {db: string}): Promise<{ collections: {name: string}[] }>;
   createCollection(options: MongoMobileTypes.DatabaseDef & {
     options?: MongoMobileTypes.CollectionCreateOptions,
   }): Promise<{collection: string}>;

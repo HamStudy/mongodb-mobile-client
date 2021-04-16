@@ -72,16 +72,16 @@ export class Db {
   }
   get collections() : Promise<Collection[]> {
     return (async () => {
-      let collections = await getMongoMobilePlugin().listCollections({db: this.databaseName});
+      let { collections } = await getMongoMobilePlugin().listCollections({db: this.databaseName});
       let collectionList = collections.map(c => this.collection(c.name));
       return collectionList;
     })();
   }
 
   static async getDatabases() : Promise<DatabaseListItem[]> {
-    let list = await getMongoMobilePlugin().listDatabases();
+    let { databases } = await getMongoMobilePlugin().listDatabases();
 
-    return list.map(i => (<DatabaseListItem>{
+    return databases.map(i => (<DatabaseListItem>{
       name: i.name,
       sizeOnDisk: i.sizeOnDisk,
       empty: i.empty,
