@@ -127,8 +127,8 @@ export class Db {
 
   async dropCollection(name: string): Promise<boolean> {
     try {
-      await getMongoMobilePlugin().dropCollection({db: this.databaseName, collection: name});
-      return true;
+      let res = await getMongoMobilePlugin().dropCollection({db: this.databaseName, collection: name});
+      return res.dropped;
     } catch {
       return false;
     }
