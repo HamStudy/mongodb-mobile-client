@@ -1,7 +1,7 @@
 import { MongoMobileTypes } from './definitions';
 import { Collection } from './collection';
 import { IteratorCallback } from './commonTypes';
-import { getMongoMobilePlugin, CursorResult } from './index';
+import { getMongoMobilePlugin } from './index';
 export type CursorResult = object | null | boolean;
 
 import {

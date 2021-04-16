@@ -1,7 +1,6 @@
 import { Collection } from './collection';
 import { IteratorCallback } from './commonTypes';
 import { getMongoMobilePlugin, CursorResult } from './index';
-export type CursorResult = object | null | boolean;
 
 import {
   decodeExtendedJson
